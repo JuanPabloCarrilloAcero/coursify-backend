@@ -1,0 +1,6 @@
+@host = http://localhost:8080
+@token = igxApoxPwT66sYBzenkEUf6YMtzk8Zh7
+
+GET {{host}}/watchlist/get
+Auth-token: {{token}}
+Content-Type: application/json

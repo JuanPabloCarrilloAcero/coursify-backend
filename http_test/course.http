@@ -1,0 +1,24 @@
+@host = http://localhost:8080
+@token = igxApoxPwT66sYBzenkEUf6YMtzk8Zh7
+
+GET {{host}}/course
+Auth-token: {{token}}
+Content-Type: application/json
+
+###
+
+GET {{host}}/course/info/1
+Auth-token: {{token}}
+Content-Type: application/json
+
+###
+
+GET {{host}}/course/download/1
+Auth-token: {{token}}
+Content-Type: application/json
+
+###
+
+GET {{host}}/course/progress/1
+Auth-token: {{token}}
+Content-Type: application/json

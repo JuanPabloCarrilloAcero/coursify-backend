@@ -1,0 +1,5 @@
+@host = http://localhost:8080
+@token = igxApoxPwT66sYBzenkEUf6YMtzk8Zh7
+
+GET {{host}}/ping
+Auth-token: igxApoxPwT66sYBzenkEUf6YMtzk8Zh7

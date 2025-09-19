@@ -1,0 +1,12 @@
+@host = http://localhost:8080
+@token = igxApoxPwT66sYBzenkEUf6YMtzk8Zh7
+
+POST {{host}}/user/create
+Auth-token: {{token}}
+Content-Type: application/json
+
+{
+  "name": "name",
+  "email": "email",
+  "password": "password"
+}
