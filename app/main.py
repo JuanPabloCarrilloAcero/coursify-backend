@@ -3,14 +3,16 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
-from middleware.verify_middleware import VerifyTokenMiddleware
-from router import auth, watchlist, course, chat, user
-from util.log_time import log_time
+from app.config.settings import init_settings
+from app.middleware.verify_middleware import VerifyTokenMiddleware
+from app.router import user, chat, course, watchlist, auth
+from app.util.log_time import log_time
 
 
 @asynccontextmanager
-async def lifespan(appFastAPI: FastAPI):
+async def lifespan(f: FastAPI):
     log_time("🔄:       Initializing application...")
+    init_settings(f)
     log_time("✅:       Startup complete. Global dependencies initialized.")
 
     yield

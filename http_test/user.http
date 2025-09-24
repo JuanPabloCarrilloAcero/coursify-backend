@@ -10,3 +10,9 @@ Content-Type: application/json
   "email": "email",
   "password": "password"
 }
+
+###
+
+GET {{host}}/user/get/2
+Auth-token: {{token}}
+Content-Type: application/json
