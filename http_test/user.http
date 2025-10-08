@@ -13,6 +13,6 @@ Content-Type: application/json
 
 ###
 
-GET {{host}}/user/get/2
+GET {{host}}/user/get/0
 Auth-token: {{token}}
 Content-Type: application/json

@@ -6,6 +6,6 @@ Auth-token: {{token}}
 Content-Type: application/json
 
 {
-  "email": "test",
-  "password": "testPassword"
+  "email": "email",
+  "password": "password"
 }

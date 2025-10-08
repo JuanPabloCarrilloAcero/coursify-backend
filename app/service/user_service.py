@@ -1,8 +1,10 @@
 from fastapi import HTTPException
+from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.model import model as models
 from app.schema import schema as schemas
+from app.util.security import hash_password
 
 
 def create_user(user: schemas.User, db: Session):
@@ -10,7 +12,7 @@ def create_user(user: schemas.User, db: Session):
         raise HTTPException(status_code=400, detail="Email ya registrado")
 
     data = user.model_dump()
-    data["password"] = hash(data["password"])
+    data["password"] = hash_password(data["password"])
     user = models.User(**data)
 
     db.add(user)

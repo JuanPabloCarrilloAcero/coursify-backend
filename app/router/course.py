@@ -23,6 +23,6 @@ async def progress_by_id(course_id: str):
     return {'message progress': course_id}
 
 
-@router.post('progress/{course_id}')
+@router.post('/progress/{course_id}')
 async def progress_by_id_post(course_id: str):
     return {'new message progress': course_id}
