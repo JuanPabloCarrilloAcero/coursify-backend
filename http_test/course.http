@@ -1,5 +1,19 @@
 @host = http://localhost:8080
 @token = igxApoxPwT66sYBzenkEUf6YMtzk8Zh7
+@course_id = 0c475714-6aa0-43b7-936d-81dc20b7af80
+
+POST {{host}}/course/
+Auth-token: {{token}}
+Content-Type: application/json
+
+{
+  "title": "Python 101",
+  "description": "Intro course",
+  "thumbnail_url": "https://example.com/thumb.png",
+  "download_url": "https://example.com/course.zip"
+}
+
+###
 
 GET {{host}}/course
 Auth-token: {{token}}
@@ -7,18 +21,40 @@ Content-Type: application/json
 
 ###
 
-GET {{host}}/course/info/1
+GET {{host}}/course/info/{{course_id}}
 Auth-token: {{token}}
 Content-Type: application/json
 
 ###
 
-GET {{host}}/course/download/1
+GET {{host}}/course/download/{{course_id}}
 Auth-token: {{token}}
 Content-Type: application/json
 
 ###
 
-GET {{host}}/course/progress/1
+GET {{host}}/course/progress/{{course_id}}
 Auth-token: {{token}}
 Content-Type: application/json
+
+###
+
+POST {{host}}/course/progress/{{course_id}}
+Auth-token: {{token}}
+Content-Type: application/json
+
+{
+  "progress": 75,
+  "status": "in_progress"
+}
+
+###
+
+POST {{host}}/course/progress/{{course_id}}
+Auth-token: {{token}}
+Content-Type: application/json
+
+{
+  "progress": 100,
+  "status": "completed"
+}

@@ -1,5 +1,4 @@
 from fastapi import HTTPException
-from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.model import model as models

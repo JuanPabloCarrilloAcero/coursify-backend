@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.config.settings import get_db
 from app.service.auth_service import login_service
 
-router = APIRouter(tags=["auth"])
+router = APIRouter()
 
 
 class SignInReq(BaseModel):

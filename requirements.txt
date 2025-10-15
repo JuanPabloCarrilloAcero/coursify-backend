@@ -19,3 +19,4 @@ PyJWT==2.10.1
 bcrypt==5.0.0
 argon2-cffi==25.1.0
 argon2-cffi-bindings==25.1.0
+python-multipart==0.0.20
