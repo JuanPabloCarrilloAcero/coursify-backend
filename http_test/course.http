@@ -1,60 +1,68 @@
 @host = http://localhost:8080
 @token = igxApoxPwT66sYBzenkEUf6YMtzk8Zh7
-@course_id = 0c475714-6aa0-43b7-936d-81dc20b7af80
+@course_id = 1
 
-POST {{host}}/course/
+### Create
+POST {{host}}/course
 Auth-token: {{token}}
 Content-Type: application/json
 
 {
   "title": "Python 101",
   "description": "Intro course",
+  "duration_seconds": 5400,
+  "format": "video",
+  "course_type": "self_paced",
   "thumbnail_url": "https://example.com/thumb.png",
-  "download_url": "https://example.com/course.zip"
+  "download_url": "https://example.com/course.zip",
+  "tags": [
+    "python",
+    "intro"
+  ]
 }
 
-###
-
+### List
 GET {{host}}/course
 Auth-token: {{token}}
-Content-Type: application/json
 
-###
-
-GET {{host}}/course/info/{{course_id}}
+### Detail (composed DTO)
+GET {{host}}/course/{{course_id}}
 Auth-token: {{token}}
-Content-Type: application/json
 
-###
-
-GET {{host}}/course/download/{{course_id}}
+### Upload course
+POST {{host}}/course/{{course_id}}/upload
 Auth-token: {{token}}
-Content-Type: application/json
+Content-Type: multipart/form-data; boundary=MyBoundary
 
-###
+--MyBoundary
+Content-Disposition: form-data; name="file"; filename="sample_1920x1080.mp4"
+Content-Type: video/mp4
 
-GET {{host}}/course/progress/{{course_id}}
+< ../samples/sample_1920x1080.mp4
+--MyBoundary--
+
+### Download
+GET {{host}}/course/{{course_id}}/download
 Auth-token: {{token}}
-Content-Type: application/json
 
-###
+### Progress (get)
+GET {{host}}/course/{{course_id}}/progress
+Auth-token: {{token}}
 
-POST {{host}}/course/progress/{{course_id}}
+### Progress (update)
+PATCH {{host}}/course/{{course_id}}/progress
 Auth-token: {{token}}
 Content-Type: application/json
 
 {
-  "progress": 75,
-  "status": "in_progress"
+  "progress": 0
 }
 
-###
-
-POST {{host}}/course/progress/{{course_id}}
+### Progress (complete)
+PATCH {{host}}/course/{{course_id}}/progress
 Auth-token: {{token}}
 Content-Type: application/json
 
 {
-  "progress": 100,
-  "status": "completed"
+  "progress": 100
 }

@@ -3,12 +3,6 @@
 @user_id = 1
 @course_id = 0c475714-6aa0-43b7-936d-81dc20b7af80
 
-GET {{host}}/watchlist/get?user_id={{user_id}}
-Auth-token: {{token}}
-Content-Type: application/json
-
-###
-
 POST {{host}}/watchlist/
 Auth-token: {{token}}
 Content-Type: application/json
@@ -17,6 +11,12 @@ Content-Type: application/json
   "user_id": "{{user_id}}",
   "course_id": "{{course_id}}"
 }
+
+###
+
+GET {{host}}/watchlist/get?user_id={{user_id}}
+Auth-token: {{token}}
+Content-Type: application/json
 
 ###
 
