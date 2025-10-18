@@ -87,12 +87,13 @@ def create_course(payload: schemas.CourseCreate, db: Session) -> models.Course:
     return course
 
 
-def list_courses(db: Session) -> list[type[Course]]:
-    return (
+def list_courses(db: Session) -> list[schemas.CourseDetailResponse]:
+    courses = (
         db.query(models.Course)
         .order_by(models.Course.created_at.desc())
         .all()
     )
+    return [_to_detail(course) for course in courses]
 
 
 def get_course(course_id: int, db: Session) -> type[Course]:

@@ -10,7 +10,7 @@ from app.service import course_service
 router = APIRouter()
 
 
-@router.get("/", response_model=list[CourseOut])
+@router.get("/", response_model=list[CourseDetailResponse])
 async def get_all(db: Session = Depends(get_db)):
     courses = course_service.list_courses(db)
     return courses
