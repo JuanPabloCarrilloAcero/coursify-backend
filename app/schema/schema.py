@@ -54,7 +54,7 @@ class CourseCreate(BaseModel):
     duration_seconds: Optional[int] = Field(None, ge=0)
     format: Optional[FormatLiteral] = "video"
     course_type: Optional[CourseTypeLiteral] = "self_paced"
-    learning_goals: Optional[str] = None
+    learning_goals: Optional[list[str]] = []
     rating_avg: Optional[float] = Field(0.0, ge=0, le=5)
     requires_certificate: Optional[bool] = False
     title_image: Optional[str] = None
@@ -70,7 +70,7 @@ class CourseUpdate(BaseModel):
     duration_seconds: Optional[int] = Field(None, ge=0)
     format: Optional[FormatLiteral] = None
     course_type: Optional[CourseTypeLiteral] = None
-    learning_goals: Optional[str] = None
+    learning_goals: Optional[list[str]] = []
     rating_avg: Optional[float] = Field(None, ge=0, le=5)
     requires_certificate: Optional[bool] = None
     title_image: Optional[str] = None
@@ -110,11 +110,12 @@ class CourseDetailResponse(BaseModel):
     duration: Optional[str] = None  # "1h 30m" or "5400s"
     format: FormatLiteral
     course_type: CourseTypeLiteral
-    learning_goals: Optional[str] = None
+    learning_goals: Optional[list[str]] = []
     rating: float  # 1..5 average
     is_downloaded: bool
     progress: int  # 0..100
     title_image: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     tags: Optional[List[str]] = None
     requires_certificate: bool
     model_config = ConfigDict(from_attributes=True)

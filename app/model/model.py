@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Integer, String, Boolean, Column, DateTime, func, ForeignKey, Enum, Text, Float, UniqueConstraint
+from sqlalchemy import JSON, Integer, String, Boolean, Column, DateTime, func, ForeignKey, Enum, Text, Float, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -41,7 +41,7 @@ class Course(Base):
     duration_seconds = Column(Integer, nullable=True)
     format = Column(CourseFormat, nullable=False, default="video")
     course_type = Column(CourseType, nullable=False, default="self_paced")
-    learning_goals = Column(Text)
+    learning_goals = Column(JSON, nullable=True)
     rating_avg = Column(Float, nullable=False, default=0.0)
     requires_certificate = Column(Boolean, nullable=False, default=False)
     title_image = Column(String)

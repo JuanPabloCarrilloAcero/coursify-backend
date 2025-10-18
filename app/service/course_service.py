@@ -39,6 +39,7 @@ def _to_detail(course: models.Course) -> schemas.CourseDetailResponse:
         is_downloaded=bool(course.is_downloaded),
         progress=progress_val,
         title_image=course.title_image,
+        thumbnail_url=course.thumbnail_url,
         tags=tags,
         requires_certificate=bool(course.requires_certificate),
     )
@@ -79,7 +80,7 @@ def create_course(payload: schemas.CourseCreate, db: Session) -> models.Course:
 
     _set_tags(course, data.get("tags"))
 
-    course.progress = models.CourseProgress(progress=0, status="not_started")
+    course.progress = models.CourseProgress(progress=0)
 
     db.add(course)
     db.commit()
@@ -90,7 +91,7 @@ def create_course(payload: schemas.CourseCreate, db: Session) -> models.Course:
 def list_courses(db: Session) -> list[schemas.CourseDetailResponse]:
     courses = (
         db.query(models.Course)
-        .order_by(models.Course.created_at.desc())
+        .order_by(models.Course.created_at.asc())
         .all()
     )
     return [_to_detail(course) for course in courses]
