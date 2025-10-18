@@ -34,6 +34,8 @@ class UserProfileResponse(BaseModel):
     website: Optional[str] = None
     bio: Optional[str] = None
     gender: Optional[Literal["male", "female", "other"]] = None
+    avatar_url: Optional[str] = None
+    avatar_thumbnail_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

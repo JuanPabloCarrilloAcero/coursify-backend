@@ -9,7 +9,31 @@ from app.util.security import hash_password
 
 
 def _to_profile_response(user: models.User) -> schemas.UserProfileResponse:
-    return schemas.UserProfileResponse.model_validate(user, from_attributes=True)
+    funny_themes = [
+        "BananaKing",
+        "CaptainPigeon",
+        "TechSloth",
+        "RoboDuck",
+        "SarcasticPanda",
+        "SleepyTaco",
+        "DiscoLlama",
+        "NinjaPotato",
+        "QuantumOtter",
+        "SpicyUnicorn",
+    ]
+
+    theme = funny_themes[user.id % len(funny_themes)]
+
+    seed = f"user-{user.id}-{theme}"
+
+    avatar_url = f"https://api.dicebear.com/7.x/fun-emoji/svg?seed={seed}"
+    avatar_thumbnail_url = f"{avatar_url}&size=64"
+
+    profile_data = user.__dict__.copy()
+    profile_data["avatar_url"] = avatar_url
+    profile_data["avatar_thumbnail_url"] = avatar_thumbnail_url
+
+    return schemas.UserProfileResponse.model_validate(profile_data, from_attributes=True)
 
 
 def create_user(user_in: schemas.UserCreate, db: Session) -> schemas.UserProfileResponse:

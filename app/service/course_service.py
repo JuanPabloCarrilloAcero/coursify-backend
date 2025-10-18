@@ -117,9 +117,10 @@ def get_course_detail(course_id: int, db: Session) -> schemas.CourseDetailRespon
 
 def get_course_download(course_id: int, db: Session) -> schemas.CourseDownloadOut:
     course = get_course(course_id, db)
+    dumb_url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
     if not course.download_url:
         raise HTTPException(status_code=404, detail="Descarga no disponible para este curso")
-    return schemas.CourseDownloadOut(course_id=course.id, download_url=course.download_url)
+    return schemas.CourseDownloadOut(course_id=course.id, download_url=dumb_url)
 
 
 def get_progress(course_id: int, db: Session) -> schemas.CourseProgressOut:
