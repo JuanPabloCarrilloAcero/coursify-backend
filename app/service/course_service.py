@@ -24,9 +24,15 @@ def _format_duration(seconds: Optional[int]) -> Optional[str]:
     return f"{seconds}s"
 
 
-def _to_detail(course: models.Course) -> schemas.CourseDetailResponse:
+def _to_detail(course: models.Course, user_id: int) -> schemas.CourseDetailResponse:
     tags = [t.tag for t in (course.tags or [])] or None
-    progress_val = course.progress.progress if course.progress else 0
+
+    progress_val = 0
+    if course.progress_items:
+        user_progress = next((p for p in course.progress_items if p.user_id == user_id), None)
+        if user_progress:
+            progress_val = user_progress.progress
+
     return schemas.CourseDetailResponse(
         id=course.id,
         title=course.title,
@@ -88,13 +94,13 @@ def create_course(payload: schemas.CourseCreate, db: Session) -> models.Course:
     return course
 
 
-def list_courses(db: Session) -> list[schemas.CourseDetailResponse]:
+def list_courses(db: Session, user_id) -> list[schemas.CourseDetailResponse]:
     courses = (
         db.query(models.Course)
         .order_by(models.Course.created_at.asc())
         .all()
     )
-    return [_to_detail(course) for course in courses]
+    return [_to_detail(course, user_id) for course in courses]
 
 
 def get_course(course_id: int, db: Session) -> type[Course]:
@@ -104,7 +110,7 @@ def get_course(course_id: int, db: Session) -> type[Course]:
     return course
 
 
-def get_course_detail(course_id: int, db: Session) -> schemas.CourseDetailResponse:
+def get_course_detail(course_id: int, user_id: int, db: Session) -> schemas.CourseDetailResponse:
     course = (
         db.query(models.Course)
         .filter(models.Course.id == course_id)
@@ -112,7 +118,7 @@ def get_course_detail(course_id: int, db: Session) -> schemas.CourseDetailRespon
     )
     if not course:
         raise HTTPException(status_code=404, detail="Curso no encontrado")
-    return _to_detail(course)
+    return _to_detail(course, user_id)
 
 
 def get_course_download(course_id: int, db: Session) -> schemas.CourseDownloadOut:
@@ -123,11 +129,14 @@ def get_course_download(course_id: int, db: Session) -> schemas.CourseDownloadOu
     return schemas.CourseDownloadOut(course_id=course.id, download_url=dumb_url)
 
 
-def get_progress(course_id: int, db: Session) -> schemas.CourseProgressOut:
+def get_progress(course_id: int, db: Session, user_id: int) -> schemas.CourseProgressOut:
     course = get_course(course_id, db)
     progress = (
         db.query(models.CourseProgress)
-        .filter(models.CourseProgress.course_id == course.id)
+        .filter(
+            models.CourseProgress.course_id == course.id,
+            models.CourseProgress.user_id == user_id,
+        )
         .one_or_none()
     )
     if not progress:
@@ -135,7 +144,8 @@ def get_progress(course_id: int, db: Session) -> schemas.CourseProgressOut:
     return schemas.CourseProgressOut(course_id=course.id, progress=progress.progress)
 
 
-def upsert_progress(course_id: int, payload: schemas.CourseProgressIn, db: Session) -> schemas.CourseProgressOut:
+def upsert_progress(course_id: int, payload: schemas.CourseProgressIn, db: Session,
+                    user_id: int) -> schemas.CourseProgressOut:
     course = get_course(course_id, db)
 
     if payload.progress is not None and not (0 <= payload.progress <= 100):
@@ -143,7 +153,10 @@ def upsert_progress(course_id: int, payload: schemas.CourseProgressIn, db: Sessi
 
     progress = (
         db.query(models.CourseProgress)
-        .filter(models.CourseProgress.course_id == course.id)
+        .filter(
+            models.CourseProgress.course_id == course.id,
+            models.CourseProgress.user_id == user_id,
+        )
         .one_or_none()
     )
 
@@ -153,7 +166,8 @@ def upsert_progress(course_id: int, payload: schemas.CourseProgressIn, db: Sessi
     else:
         progress = models.CourseProgress(
             course_id=course.id,
-            progress=payload.progress or 0
+            user_id=user_id,
+            progress=payload.progress or 0,
         )
         db.add(progress)
 

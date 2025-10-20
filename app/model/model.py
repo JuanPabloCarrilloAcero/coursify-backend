@@ -1,6 +1,8 @@
 from datetime import datetime
+from typing import List
 
-from sqlalchemy import JSON, Integer, String, Boolean, Column, DateTime, func, ForeignKey, Enum, Text, Float, UniqueConstraint
+from sqlalchemy import JSON, Integer, String, Boolean, Column, DateTime, func, ForeignKey, Enum, Text, Float, \
+    UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -26,6 +28,12 @@ class User(Base):
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
 
+    course_progress: Mapped[List["CourseProgress"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
 
 # -------------------------------------------- COURSE --------------------------------------------
 CourseFormat = Enum("video", "xapi", "pdf", name="course_format")
@@ -49,7 +57,14 @@ class Course(Base):
     download_url = Column(String)
     is_downloaded = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    progress = relationship("CourseProgress", back_populates="course", uselist=False, cascade="all, delete-orphan")
+
+    # was: uselist=False (wrong for per-user)
+    progress_items = relationship(
+        "CourseProgress",
+        back_populates="course",
+        cascade="all, delete-orphan"
+    )
+
     tags = relationship("CourseTag", back_populates="course", cascade="all, delete-orphan")
 
 
@@ -57,8 +72,11 @@ class CourseProgress(Base):
     __tablename__ = "course_progress"
 
     course_id = Column(Integer, ForeignKey("courses.id"), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)  # new
     progress = Column(Integer, nullable=False, default=0)
-    course = relationship("Course", back_populates="progress")
+
+    course = relationship("Course", back_populates="progress_items")
+    user = relationship("User", back_populates="course_progress")
 
 
 class CourseTag(Base):

@@ -1,6 +1,7 @@
 @host = http://localhost:8080
 @token = igxApoxPwT66sYBzenkEUf6YMtzk8Zh7
 @course_id = 1
+@user_id = 1
 
 ### Create
 POST {{host}}/course
@@ -22,11 +23,11 @@ Content-Type: application/json
 }
 
 ### List
-GET {{host}}/course
+GET {{host}}/course/{{user_id}}
 Auth-token: {{token}}
 
 ### Detail (composed DTO)
-GET {{host}}/course/{{course_id}}
+GET {{host}}/course/detail/{{course_id}}/{{user_id}}
 Auth-token: {{token}}
 
 ### Upload course
@@ -46,20 +47,20 @@ GET {{host}}/course/{{course_id}}/download
 Auth-token: {{token}}
 
 ### Progress (get)
-GET {{host}}/course/{{course_id}}/progress
+GET {{host}}/course/{{course_id}}/progress/{{user_id}}
 Auth-token: {{token}}
 
 ### Progress (update)
-PATCH {{host}}/course/{{course_id}}/progress
+PATCH {{host}}/course/{{course_id}}/progress/{{user_id}}
 Auth-token: {{token}}
 Content-Type: application/json
 
 {
-  "progress": 0
+  "progress": 15
 }
 
 ### Progress (complete)
-PATCH {{host}}/course/{{course_id}}/progress
+PATCH {{host}}/course/{{course_id}}/progress/{{user_id}}
 Auth-token: {{token}}
 Content-Type: application/json
 

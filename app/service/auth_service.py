@@ -13,4 +13,4 @@ def login_service(email: str, password: str, db):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     token = 'igxApoxPwT66sYBzenkEUf6YMtzk8Zh7'
-    return {"access_token": token}
+    return {"access_token": token, "user_id": user.id, }
