@@ -4,7 +4,7 @@ from starlette import status
 
 from app.config.settings import get_db
 from app.schema.schema import CourseOut, CourseDownloadOut, CourseDetailResponse, CourseProgressOut, CourseProgressIn, \
-    CourseCreate
+    CourseCreate, CourseDownloadStatusIn
 from app.service import course_service
 
 router = APIRouter()
@@ -35,6 +35,16 @@ async def progress_by_id(course_id: int, user_id: int, db: Session = Depends(get
 async def progress_update(course_id: int, user_id: int, payload: CourseProgressIn,
                           db: Session = Depends(get_db)) -> CourseProgressOut:
     return course_service.upsert_progress(course_id, payload, db, user_id=user_id)
+
+
+@router.patch("/{course_id}/download/{user_id}", response_model=CourseProgressOut)
+async def update_download_status(
+    course_id: int,
+    user_id: int,
+    payload: CourseDownloadStatusIn,
+    db: Session = Depends(get_db)
+) -> CourseProgressOut:
+    return course_service.update_download_status(course_id, user_id, payload, db)
 
 
 @router.post("/", response_model=CourseOut, status_code=status.HTTP_201_CREATED)

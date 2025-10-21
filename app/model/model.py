@@ -73,7 +73,8 @@ class CourseProgress(Base):
 
     course_id = Column(Integer, ForeignKey("courses.id"), primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)  # new
-    progress = Column(Integer, nullable=False, default=0)
+    progress = Column(Float, nullable=False, default=0.0)
+    is_downloaded = Column(Boolean, nullable=False, default=False)
 
     course = relationship("Course", back_populates="progress_items")
     user = relationship("User", back_populates="course_progress")

@@ -28,10 +28,12 @@ def _to_detail(course: models.Course, user_id: int) -> schemas.CourseDetailRespo
     tags = [t.tag for t in (course.tags or [])] or None
 
     progress_val = 0
+    is_downloaded_val = False
     if course.progress_items:
         user_progress = next((p for p in course.progress_items if p.user_id == user_id), None)
         if user_progress:
             progress_val = user_progress.progress
+            is_downloaded_val = bool(user_progress.is_downloaded)
 
     return schemas.CourseDetailResponse(
         id=course.id,
@@ -42,7 +44,7 @@ def _to_detail(course: models.Course, user_id: int) -> schemas.CourseDetailRespo
         course_type=course.course_type,
         learning_goals=course.learning_goals,
         rating=round(course.rating_avg or 0.0, 2),
-        is_downloaded=bool(course.is_downloaded),
+        is_downloaded=is_downloaded_val,
         progress=progress_val,
         title_image=course.title_image,
         thumbnail_url=course.thumbnail_url,
@@ -141,8 +143,12 @@ def get_progress(course_id: int, db: Session, user_id: int) -> schemas.CoursePro
         .one_or_none()
     )
     if not progress:
-        return schemas.CourseProgressOut(course_id=course.id, progress=0)
-    return schemas.CourseProgressOut(course_id=course.id, progress=progress.progress)
+        return schemas.CourseProgressOut(course_id=course.id, progress=0, is_downloaded=False)
+    return schemas.CourseProgressOut(
+        course_id=course.id,
+        progress=progress.progress,
+        is_downloaded=bool(progress.is_downloaded)
+    )
 
 
 def upsert_progress(course_id: int, payload: schemas.CourseProgressIn, db: Session,
@@ -174,7 +180,50 @@ def upsert_progress(course_id: int, payload: schemas.CourseProgressIn, db: Sessi
 
     db.commit()
     db.refresh(progress)
-    return schemas.CourseProgressOut(course_id=course.id, progress=progress.progress)
+    return schemas.CourseProgressOut(
+        course_id=course.id,
+        progress=progress.progress,
+        is_downloaded=bool(progress.is_downloaded)
+    )
+
+
+def update_download_status(
+    course_id: int,
+    user_id: int,
+    payload: schemas.CourseDownloadStatusIn,
+    db: Session
+) -> schemas.CourseProgressOut:
+    """Update the download status for a specific user and course."""
+    course = get_course(course_id, db)
+
+    progress = (
+        db.query(models.CourseProgress)
+        .filter(
+            models.CourseProgress.course_id == course.id,
+            models.CourseProgress.user_id == user_id,
+        )
+        .one_or_none()
+    )
+
+    if progress:
+        progress.is_downloaded = payload.is_downloaded
+    else:
+        # Create progress record if it doesn't exist
+        progress = models.CourseProgress(
+            course_id=course.id,
+            user_id=user_id,
+            progress=0,
+            is_downloaded=payload.is_downloaded,
+        )
+        db.add(progress)
+
+    db.commit()
+    db.refresh(progress)
+    return schemas.CourseProgressOut(
+        course_id=course.id,
+        progress=progress.progress,
+        is_downloaded=bool(progress.is_downloaded)
+    )
 
 
 UPLOAD_ROOT = Path("uploads/courses")

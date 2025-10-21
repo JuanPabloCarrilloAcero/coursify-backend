@@ -84,12 +84,17 @@ class CourseUpdate(BaseModel):
 
 # Progress I/O (progress is a different entity)
 class CourseProgressIn(BaseModel):
-    progress: Optional[int] = Field(None, ge=0, le=100)
+    progress: Optional[float] = Field(None, ge=0, le=100)
+
+
+class CourseDownloadStatusIn(BaseModel):
+    is_downloaded: bool
 
 
 class CourseProgressOut(BaseModel):
     course_id: int
-    progress: int
+    progress: float
+    is_downloaded: bool = False
 
 
 # “Slim” out
@@ -115,7 +120,7 @@ class CourseDetailResponse(BaseModel):
     learning_goals: Optional[list[str]] = []
     rating: float  # 1..5 average
     is_downloaded: bool
-    progress: int  # 0..100
+    progress: float  # 0..100
     title_image: Optional[str] = None
     thumbnail_url: Optional[str] = None
     download_url: Optional[str] = None
