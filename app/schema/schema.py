@@ -118,6 +118,7 @@ class CourseDetailResponse(BaseModel):
     progress: int  # 0..100
     title_image: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    download_url: Optional[str] = None
     tags: Optional[List[str]] = None
     requires_certificate: bool
     model_config = ConfigDict(from_attributes=True)
