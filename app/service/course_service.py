@@ -40,6 +40,7 @@ def _to_detail(course: models.Course) -> schemas.CourseDetailResponse:
         progress=progress_val,
         title_image=course.title_image,
         thumbnail_url=course.thumbnail_url,
+        download_url=course.download_url,
         tags=tags,
         requires_certificate=bool(course.requires_certificate),
     )
