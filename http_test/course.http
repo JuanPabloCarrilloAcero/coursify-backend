@@ -67,3 +67,11 @@ Content-Type: application/json
 {
   "progress": 100
 }
+
+### Download certificate (generate new PDF locally each time)
+PUT {{host}}/course/{{course_id}}/certificate/download/{{user_id}}
+Auth-token: {{token}}
+
+### Validate with captured serial
+GET {{host}}/course/{{course_id}}/certificate/validate/{{user_id}}?certificate_code=d1dd9f57d5ee01787231e0638d57697fabb290c8228707e5c4cdf92023414f98
+Auth-token: {{token}}

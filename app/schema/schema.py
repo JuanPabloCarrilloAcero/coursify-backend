@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # -------------------------------------------- USER --------------------------------------------
@@ -126,6 +126,14 @@ class CourseDetailResponse(BaseModel):
 class CourseDownloadOut(BaseModel):
     course_id: int  # use str if you kept UUID PKs
     download_url: str
+
+
+class CertificateOut(BaseModel):
+    user_id: int
+    course_id: int
+    pdf_url: str
+    certificate_code: str
+    issued_at: datetime
 
 
 # -------------------------------------------- WATCHLIST --------------------------------------------

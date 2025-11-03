@@ -1,13 +1,16 @@
+import datetime
 import os
 from pathlib import Path
 from typing import Optional, Iterable
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from starlette import status
 
 from app.model import model as models
 from app.model.model import Course
 from app.schema import schema as schemas
+from app.util.security import hash_certificate, verify_certificate
 
 
 def _format_duration(seconds: Optional[int]) -> Optional[str]:
@@ -200,3 +203,78 @@ async def upload_course_file(course_id, file, db):
     db.refresh(course)
 
     return course
+
+
+def _ensure_dir(p: Path):
+    p.mkdir(parents=True, exist_ok=True)
+
+
+def _render_certificate_pdf_bytes(*, course_title: str, user_id: int, course_id: int, code: str,
+                                  issued_at: datetime) -> bytes:
+    # minimal reportlab PDF; add reportlab to your deps
+    try:
+        from io import BytesIO
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+
+        buf = BytesIO()
+        c = canvas.Canvas(buf, pagesize=A4)
+        w, h = A4
+
+        c.setFont("Helvetica-Bold", 24)
+        c.drawCentredString(w / 2, h - 120, "Certificate of Completion")
+
+        c.setFont("Helvetica", 16)
+        c.drawCentredString(w / 2, h - 170, course_title)
+
+        c.setFont("Helvetica", 12)
+        c.drawCentredString(w / 2, h - 220, f"User ID: {user_id}  •  Course ID: {course_id}")
+
+        c.setFont("Helvetica-Oblique", 11)
+        c.drawCentredString(w / 2, 120, f"Code: {code}  •  Issued: {issued_at.isoformat(timespec='seconds')}")
+
+        c.showPage()
+        c.save()
+        return buf.getvalue()
+    except Exception as e:
+        raise RuntimeError(f"PDF render failed: {e}")
+
+
+async def download_certificate(course_id: int, user_id: int, db: Session):
+    # 1) require 100% completion
+    progress = get_progress(course_id, db, user_id=user_id)
+    if (progress.progress or 0) < 100:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Requires 100% completion.")
+
+    # 2) derive deterministic certificate code
+    certificate_code = hash_certificate(user_id, course_id)
+    issued_at = datetime.datetime.utcnow()
+
+    # 3) render and save locally every time
+    CERT_UPLOAD_ROOT = Path("uploads/certificates")
+
+    course = get_course(course_id, db)
+    rel_dir = CERT_UPLOAD_ROOT / str(course_id) / str(user_id)
+    _ensure_dir(rel_dir)
+    filename = f"certificate_{certificate_code}_{issued_at.strftime('%Y%m%dT%H%M%S')}.pdf"
+    file_path = rel_dir / filename
+
+    pdf_bytes = _render_certificate_pdf_bytes(
+        course_title=course.title, user_id=user_id, course_id=course_id, code=certificate_code, issued_at=issued_at
+    )
+    with open(file_path, "wb") as f:
+        f.write(pdf_bytes)
+
+    # 4) return payload (local path; your GCP uploader can read and push this file later)
+    return schemas.CertificateOut(
+        user_id=user_id,
+        course_id=course_id,
+        pdf_url=str(file_path),
+        certificate_code=certificate_code,
+        issued_at=issued_at,
+    )
+
+
+async def validate_certificate(course_id: int, user_id: int, certificate_code: str):
+    valid = verify_certificate(user_id, course_id, certificate_code)
+    return valid

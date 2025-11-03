@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, Query
 from sqlalchemy.orm import Session
 from starlette import status
 
 from app.config.settings import get_db
 from app.schema.schema import CourseOut, CourseDownloadOut, CourseDetailResponse, CourseProgressOut, CourseProgressIn, \
-    CourseCreate
+    CourseCreate, CertificateOut
 from app.service import course_service
 
 router = APIRouter()
@@ -50,3 +50,14 @@ async def upload_course_file(
         db: Session = Depends(get_db),
 ):
     return await course_service.upload_course_file(course_id, file, db)
+
+
+@router.put("/{course_id}/certificate/download/{user_id}", response_model=CertificateOut)
+async def download_certificate(course_id: int, user_id: int, db: Session = Depends(get_db)):
+    return await course_service.download_certificate(course_id, user_id, db)
+
+
+@router.get("/{course_id}/certificate/validate/{user_id}")
+async def validate_course(course_id: int, user_id: int, certificate_code: str = Query(..., alias="certificate_code"),
+                          db: Session = Depends(get_db)):
+    return await course_service.validate_certificate(course_id, user_id, certificate_code)
