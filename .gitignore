@@ -1,1 +1,16 @@
 .idea
+*.pyc
+__pycache__/
+env/
+venv/
+.DS_Store
+*.log
+node_modules/
+dist/
+build/
+.env
+coverage/
+*.sqlite3
+*.egg-info/
+.vscode/
+*.db
