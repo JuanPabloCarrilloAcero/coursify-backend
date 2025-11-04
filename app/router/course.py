@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Query
+from fastapi import APIRouter, Depends, Request, UploadFile, File, Query
 from sqlalchemy.orm import Session
 from starlette import status
 
@@ -22,8 +22,8 @@ async def get_detail(course_id: int, user_id: int, db: Session = Depends(get_db)
 
 
 @router.get("/{course_id}/download", response_model=CourseDownloadOut)
-async def download_by_id(course_id: int, db: Session = Depends(get_db)):
-    return course_service.get_course_download(course_id, db)
+async def download_by_id(course_id: int, db: Session = Depends(get_db), request: Request = None,):
+    return course_service.get_course_download(course_id, db, request)
 
 
 @router.get("/{course_id}/progress/{user_id}", response_model=CourseProgressOut)
@@ -39,10 +39,10 @@ async def progress_update(course_id: int, user_id: int, payload: CourseProgressI
 
 @router.patch("/{course_id}/download/{user_id}", response_model=CourseProgressOut)
 async def update_download_status(
-    course_id: int,
-    user_id: int,
-    payload: CourseDownloadStatusIn,
-    db: Session = Depends(get_db)
+        course_id: int,
+        user_id: int,
+        payload: CourseDownloadStatusIn,
+        db: Session = Depends(get_db)
 ) -> CourseProgressOut:
     return course_service.update_download_status(course_id, user_id, payload, db)
 
@@ -58,8 +58,9 @@ async def upload_course_file(
         course_id: int,
         file: UploadFile = File(...),
         db: Session = Depends(get_db),
+        request: Request = None,
 ):
-    return await course_service.upload_course_file(course_id, file, db)
+    return await course_service.upload_course_file(course_id, file, db, request)
 
 
 @router.put("/{course_id}/certificate/download/{user_id}", response_model=CertificateOut)

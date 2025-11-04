@@ -2,6 +2,7 @@ import datetime
 import os
 from pathlib import Path
 from typing import Optional, Iterable
+from urllib.parse import urlparse
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -126,13 +127,39 @@ def get_course_detail(course_id: int, user_id: int, db: Session) -> schemas.Cour
         raise HTTPException(status_code=404, detail="Curso no encontrado")
     return _to_detail(course, user_id)
 
+def _extract_blob_path(value: str, expected_bucket: str) -> str:
+    if value.startswith("gs://"):
+        _, rest = value.split("gs://", 1)
+        bucket, obj = rest.split("/", 1)
+        if bucket != expected_bucket:
+            raise HTTPException(status_code=400, detail="Bucket mismatch for stored URL")
+        return obj
+    if value.startswith("http://") or value.startswith("https://"):
+        u = urlparse(value)
+        if u.netloc.endswith(".storage.googleapis.com"):
+            bucket = u.netloc.split(".storage.googleapis.com")[0]
+            obj = u.path.lstrip("/")
+        else:
+            parts = u.path.lstrip("/").split("/", 1)
+            if len(parts) < 2:
+                raise HTTPException(status_code=400, detail="Invalid stored URL format")
+            bucket, obj = parts[0], parts[1]
+        if bucket != expected_bucket:
+            raise HTTPException(status_code=400, detail="Bucket mismatch for stored URL")
+        return obj
+    return value.lstrip("/")
 
-def get_course_download(course_id: int, db: Session) -> schemas.CourseDownloadOut:
+def get_course_download(course_id: int, db: Session, request) -> schemas.CourseDownloadOut:
     course = get_course(course_id, db)
-    dumb_url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
     if not course.download_url:
         raise HTTPException(status_code=404, detail="Descarga no disponible para este curso")
-    return schemas.CourseDownloadOut(course_id=course.id, download_url=dumb_url)
+
+    bucket_name = request.app.state.gcs_bucket.name
+    blob_path = _extract_blob_path(course.download_url, expected_bucket=bucket_name)
+
+    signed_url = request.app.state.signed_url_for(blob_path, ttl_seconds=3600, method="GET")
+
+    return schemas.CourseDownloadOut(course_id=course.id, download_url=signed_url)
 
 
 def get_progress(course_id: int, db: Session, user_id: int) -> schemas.CourseProgressOut:
@@ -191,10 +218,10 @@ def upsert_progress(course_id: int, payload: schemas.CourseProgressIn, db: Sessi
 
 
 def update_download_status(
-    course_id: int,
-    user_id: int,
-    payload: schemas.CourseDownloadStatusIn,
-    db: Session
+        course_id: int,
+        user_id: int,
+        payload: schemas.CourseDownloadStatusIn,
+        db: Session
 ) -> schemas.CourseProgressOut:
     """Update the download status for a specific user and course."""
     course = get_course(course_id, db)
@@ -232,26 +259,23 @@ def update_download_status(
 UPLOAD_ROOT = Path("uploads/courses")
 
 
-async def upload_course_file(course_id, file, db):
+async def upload_course_file(course_id, file, db, request):
     course = get_course(course_id, db)
 
-    dest_dir = UPLOAD_ROOT / str(course.id)
-    dest_dir.mkdir(parents=True, exist_ok=True)
+    _, file_ext = os.path.splitext(file.filename or "")
+    safe_name = f"course{file_ext}"
+    blob_path = f"courses/{course.id}/{safe_name}"
 
-    # Save file locally
-    file_ext = os.path.splitext(file.filename)[1]
-    safe_name = f"course{file_ext or ''}"
-    file_path = dest_dir / safe_name
+    upload_fn = request.app.state.upload_bytes_to_gcs
+    signed_url_fn = request.app.state.signed_url_for
 
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
+    data = await file.read()
+    upload_fn(blob_path, data, content_type=file.content_type)
+    signed_url = signed_url_fn(blob_path)
 
-    # Store local path as download_url (relative or absolute)
-    # For now, local path; in the future, replace with GCP bucket URL.
-    course.download_url = str(file_path)
+    course.download_url = signed_url
     db.commit()
     db.refresh(course)
-
     return course
 
 

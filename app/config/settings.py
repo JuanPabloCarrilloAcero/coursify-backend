@@ -1,6 +1,10 @@
 import os
+from datetime import timedelta
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
+from google.auth.exceptions import DefaultCredentialsError
+from google.cloud import storage
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -8,7 +12,9 @@ from app.model.model import Base
 
 
 def init_settings(app: FastAPI):
+    load_dotenv(override=False)
     init_db(app)
+    init_gcp(app)
 
 
 def init_db(app: FastAPI):
@@ -30,3 +36,48 @@ def get_db(request: Request):
         yield db
     finally:
         db.close()
+
+
+def init_gcp(app: FastAPI):
+    bucket_name = os.getenv("GCS_BUCKET")
+    if not bucket_name:
+        raise RuntimeError("GCS_BUCKET not set. Add it to your .env")
+
+    creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_COURSIFY")
+    if creds_path and not os.path.isfile(creds_path):
+        raise RuntimeError(f"GOOGLE_APPLICATION_CREDENTIALS_COURSIFY points to a missing file: {creds_path}")
+
+    try:
+        storage_client = storage.Client.from_service_account_json(creds_path)
+    except DefaultCredentialsError as e:
+        raise RuntimeError(
+            "No GCP credentials found. Set GOOGLE_APPLICATION_CREDENTIALS_COURSIFY or run where ADC is available."
+        ) from e
+
+    bucket = storage_client.lookup_bucket(bucket_name)
+    if bucket is None:
+        raise RuntimeError(f"GCS bucket '{bucket_name}' does not exist or is not accessible with current creds.")
+
+    app.state.gcs_client = storage_client
+    app.state.gcs_bucket = bucket
+
+    def upload_bytes_to_gcs(blob_path: str, data: bytes, content_type: str | None = None) -> str:
+        blob = bucket.blob(blob_path)
+        blob.upload_from_string(data, content_type=content_type)
+        return f"gs://{bucket_name}/{blob_path}"
+
+    def signed_url_for(blob_path: str, ttl_seconds: int | None = None, method: str = "GET") -> str:
+        name = blob_path.lstrip("/")
+        blob = bucket.blob(name)
+
+        if not ttl_seconds:
+            ttl_seconds = int(os.getenv("GCS_SIGNED_URL_TTL", "3600"))
+
+        return blob.generate_signed_url(
+            version="v4",
+            method=method,
+            expiration=timedelta(seconds=ttl_seconds),
+        )
+
+    app.state.upload_bytes_to_gcs = upload_bytes_to_gcs
+    app.state.signed_url_for = signed_url_for
