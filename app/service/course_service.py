@@ -127,6 +127,7 @@ def get_course_detail(course_id: int, user_id: int, db: Session) -> schemas.Cour
         raise HTTPException(status_code=404, detail="Curso no encontrado")
     return _to_detail(course, user_id)
 
+
 def _extract_blob_path(value: str, expected_bucket: str) -> str:
     if value.startswith("gs://"):
         _, rest = value.split("gs://", 1)
@@ -148,6 +149,7 @@ def _extract_blob_path(value: str, expected_bucket: str) -> str:
             raise HTTPException(status_code=400, detail="Bucket mismatch for stored URL")
         return obj
     return value.lstrip("/")
+
 
 def get_course_download(course_id: int, db: Session, request) -> schemas.CourseDownloadOut:
     course = get_course(course_id, db)
@@ -314,7 +316,7 @@ def _render_certificate_pdf_bytes(*, course_title: str, user_id: int, course_id:
         raise RuntimeError(f"PDF render failed: {e}")
 
 
-async def download_certificate(course_id: int, user_id: int, db: Session):
+async def download_certificate(course_id: int, user_id: int, db: Session, request):
     # 1) require 100% completion
     progress = get_progress(course_id, db, user_id=user_id)
     if (progress.progress or 0) < 100:
@@ -324,26 +326,35 @@ async def download_certificate(course_id: int, user_id: int, db: Session):
     certificate_code = hash_certificate(user_id, course_id)
     issued_at = datetime.datetime.utcnow()
 
-    # 3) render and save locally every time
-    CERT_UPLOAD_ROOT = Path("uploads/certificates")
-
+    # 3) render PDF bytes
     course = get_course(course_id, db)
-    rel_dir = CERT_UPLOAD_ROOT / str(course_id) / str(user_id)
-    _ensure_dir(rel_dir)
-    filename = f"certificate_{certificate_code}_{issued_at.strftime('%Y%m%dT%H%M%S')}.pdf"
-    file_path = rel_dir / filename
-
     pdf_bytes = _render_certificate_pdf_bytes(
-        course_title=course.title, user_id=user_id, course_id=course_id, code=certificate_code, issued_at=issued_at
+        course_title=course.title,
+        user_id=user_id,
+        course_id=course_id,
+        code=certificate_code,
+        issued_at=issued_at,
     )
-    with open(file_path, "wb") as f:
-        f.write(pdf_bytes)
 
-    # 4) return payload (local path; your GCP uploader can read and push this file later)
+    # 4) upload to Buckjet (via app.state uploader)
+    upload_fn = request.app.state.upload_bytes_to_gcs  # wired to Buckjet
+    signed_url_fn = request.app.state.signed_url_for
+
+    # path in bucket: certificates/<course_id>/<user_id>/certificate_<code>_<timestamp>.pdf
+    timestamp = issued_at.strftime('%Y%m%dT%H%M%S')
+    blob_path = (
+        f"certificates/{course_id}/{user_id}/"
+        f"certificate_{certificate_code}_{timestamp}.pdf"
+    )
+
+    upload_fn(blob_path, pdf_bytes, content_type="application/pdf")
+    signed_url = signed_url_fn(blob_path)
+
+    # 5) return payload (public/signed URL from Buckjet)
     return schemas.CertificateOut(
         user_id=user_id,
         course_id=course_id,
-        pdf_url=str(file_path),
+        pdf_url=signed_url,
         certificate_code=certificate_code,
         issued_at=issued_at,
     )

@@ -58,7 +58,6 @@ class Course(Base):
     is_downloaded = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # was: uselist=False (wrong for per-user)
     progress_items = relationship(
         "CourseProgress",
         back_populates="course",

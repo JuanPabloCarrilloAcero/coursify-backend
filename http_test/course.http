@@ -68,7 +68,7 @@ Content-Type: application/json
   "progress": 100
 }
 
-### Download certificate (generate new PDF locally each time)
+### Download certificate
 PUT {{host}}/course/{{course_id}}/certificate/download/{{user_id}}
 Auth-token: {{token}}
 

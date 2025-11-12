@@ -22,7 +22,7 @@ async def get_detail(course_id: int, user_id: int, db: Session = Depends(get_db)
 
 
 @router.get("/{course_id}/download", response_model=CourseDownloadOut)
-async def download_by_id(course_id: int, db: Session = Depends(get_db), request: Request = None,):
+async def download_by_id(course_id: int, db: Session = Depends(get_db), request: Request = None, ):
     return course_service.get_course_download(course_id, db, request)
 
 
@@ -64,8 +64,8 @@ async def upload_course_file(
 
 
 @router.put("/{course_id}/certificate/download/{user_id}", response_model=CertificateOut)
-async def download_certificate(course_id: int, user_id: int, db: Session = Depends(get_db)):
-    return await course_service.download_certificate(course_id, user_id, db)
+async def download_certificate(course_id: int, user_id: int, db: Session = Depends(get_db), request: Request = None, ):
+    return await course_service.download_certificate(course_id, user_id, db, request)
 
 
 @router.get("/{course_id}/certificate/validate/{user_id}")
