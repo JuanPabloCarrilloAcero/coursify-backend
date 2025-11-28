@@ -99,3 +99,18 @@ class Watchlist(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     course = relationship("Course")
+
+
+# -------------------------------------------- PASSWORD RESET TOKEN --------------------------------------------
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    code = Column(String(8), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User")
