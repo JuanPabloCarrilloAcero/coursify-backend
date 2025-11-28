@@ -383,7 +383,7 @@ async def download_certificate(course_id: int, user_id: int, db: Session, reques
 
     # 2) derive deterministic certificate code
     certificate_hash = hash_certificate(user_id, course_id)
-    certificate_code = certificate_hash + user_id.__str__() + course_id.__str__()
+    certificate_code = certificate_hash + "-" + user_id.__str__() + "-" + course_id.__str__()
     issued_at = datetime.datetime.utcnow()
 
     # 3) render PDF bytes
@@ -422,8 +422,8 @@ async def download_certificate(course_id: int, user_id: int, db: Session, reques
 
 
 async def validate_certificate(certificate_code: str):
-    user_id = int(certificate_code[-2])
-    course_id = int(certificate_code[-1])
-    certificate_hash = certificate_code[:-2]
+    user_id = int(certificate_code.split("-")[-2])
+    course_id = int(certificate_code.split("-")[-1])
+    certificate_hash = "-".join(certificate_code.split("-")[:-2])
     valid = verify_certificate(user_id, course_id, certificate_hash)
     return valid
