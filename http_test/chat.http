@@ -6,5 +6,5 @@ Auth-token: {{token}}
 Content-Type: application/json
 
 {
-  "message": "test message"
+  "message": "biggest cities in the world"
 }

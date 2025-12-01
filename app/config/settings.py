@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 
+import google.generativeai as genai
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from google.auth.exceptions import DefaultCredentialsError
@@ -15,6 +16,7 @@ def init_settings(app: FastAPI):
     load_dotenv(override=False)
     init_db(app)
     init_gcp(app)
+    init_genai(app)
 
 
 def init_db(app: FastAPI):
@@ -81,3 +83,21 @@ def init_gcp(app: FastAPI):
 
     app.state.upload_bytes_to_gcs = upload_bytes_to_gcs
     app.state.signed_url_for = signed_url_for
+
+
+def init_genai(app: FastAPI):
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY not set. Add it to your .env")
+
+    genai.configure(api_key=api_key)
+
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+    app.state.genai_model = genai.GenerativeModel(model_name)
+
+
+def get_genai(request: Request):
+    model = getattr(request.app.state, "genai_model", None)
+    if model is None:
+        raise RuntimeError("Gemini is not initialized. Did you call init_genai(app) in init_settings?")
+    return model

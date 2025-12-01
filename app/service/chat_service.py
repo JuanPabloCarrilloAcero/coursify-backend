@@ -1,5 +1,5 @@
-def send_message_service(message):
-    response = "Hi I am ChatGPT, I just received your message, "
-    response += message
-    response += ", my response is: response."
-    return response
+def send_message_service(message, genai):
+    response = genai.generate_content(message)
+    text = getattr(response, "text", None)
+
+    return {"response": text or ""}
