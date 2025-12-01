@@ -68,7 +68,7 @@ async def download_certificate(course_id: int, user_id: int, db: Session = Depen
     return await course_service.download_certificate(course_id, user_id, db, request)
 
 
-@router.get("/{course_id}/certificate/validate/{user_id}")
-async def validate_course(course_id: int, user_id: int, certificate_code: str = Query(..., alias="certificate_code"),
+@router.get("/certificate/validate")
+async def validate_course(certificate_code: str = Query(..., alias="certificate_code"),
                           db: Session = Depends(get_db)):
-    return await course_service.validate_certificate(course_id, user_id, certificate_code)
+    return await course_service.validate_certificate(certificate_code)

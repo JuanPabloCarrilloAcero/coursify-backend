@@ -12,6 +12,7 @@ from app.model import model as models
 from app.model.model import Course
 from app.schema import schema as schemas
 from app.util.security import hash_certificate, verify_certificate
+from app.service.user_service import get_user
 
 
 def _format_duration(seconds: Optional[int]) -> Optional[str]:
@@ -286,28 +287,86 @@ def _ensure_dir(p: Path):
 
 
 def _render_certificate_pdf_bytes(*, course_title: str, user_id: int, course_id: int, code: str,
-                                  issued_at: datetime) -> bytes:
+                                  issued_at: datetime, db: Session) -> bytes:
     # minimal reportlab PDF; add reportlab to your deps
     try:
         from io import BytesIO
-        from reportlab.lib.pagesizes import A4
         from reportlab.pdfgen import canvas
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.lib.utils import ImageReader
+        from pathlib import Path
+
+        PAGE_SIZE_16_9 = (1920, 1080)
 
         buf = BytesIO()
-        c = canvas.Canvas(buf, pagesize=A4)
-        w, h = A4
+        c = canvas.Canvas(buf, pagesize=PAGE_SIZE_16_9)
+        w, h = PAGE_SIZE_16_9
 
-        c.setFont("Helvetica-Bold", 24)
-        c.drawCentredString(w / 2, h - 120, "Certificate of Completion")
+        BASE_DIR = Path(__file__).resolve().parent
 
-        c.setFont("Helvetica", 16)
-        c.drawCentredString(w / 2, h - 170, course_title)
+        user_name = get_user(user_id, db).name if user_id else "No Name"
+        font_path = (BASE_DIR.parent.parent / "assets" / "fonts").resolve()
+        images_path = (BASE_DIR.parent.parent / "assets" / "images").resolve()
 
-        c.setFont("Helvetica", 12)
-        c.drawCentredString(w / 2, h - 220, f"User ID: {user_id}  •  Course ID: {course_id}")
+        pdfmetrics.registerFont(TTFont("Anton", os.path.join(font_path, "Anton-Regular.ttf")))
+        pdfmetrics.registerFont(TTFont("Nunito", os.path.join(font_path, "Nunito-Regular.ttf")))
+        pdfmetrics.registerFont(TTFont("Nunito-Italic", os.path.join(font_path, "Nunito-Italic.ttf")))
+        pdfmetrics.registerFont(TTFont("GreatVibes", os.path.join(font_path, "GreatVibes-Regular.ttf")))
+        pdfmetrics.registerFont(TTFont("MomoTrustDisplay", os.path.join(font_path, "MomoTrustDisplay-Regular.ttf")))
 
-        c.setFont("Helvetica-Oblique", 11)
-        c.drawCentredString(w / 2, 120, f"Code: {code}  •  Issued: {issued_at.isoformat(timespec='seconds')}")
+        margin_ext = 50
+        margin_int = 80
+
+        c.setLineWidth(3)
+        c.setStrokeColorRGB(34/255, 54/255, 111/255)
+        c.rect(margin_ext, margin_ext, w - margin_ext * 2, h - margin_ext * 2, stroke=1, fill=0)
+
+        c.setStrokeColorRGB(72/255, 171/255, 182/255)
+        c.rect(margin_int, margin_int, w - margin_int * 2, h - margin_int * 2, stroke=1, fill=0)
+
+        up_corner = ImageReader(os.path.join(images_path, "certificate_up_corner.png"))
+        down_corner = ImageReader(os.path.join(images_path, "certificate_down_corner.png"))
+        c.drawImage(up_corner, w - 1232, h - 286, width=1233, height=286, mask='auto')
+        c.drawImage(down_corner, -1, -1, width=1233, height=286, mask='auto')
+
+        c.setFont("Anton", 76.5)
+        c.setFillColorRGB(34/255, 54/255, 111/255)
+        c.drawCentredString(w / 2, h - 230, "CERTIFICATE OF COMPLETION")
+
+        c.setFont("Nunito", 37)
+        c.setFillColorRGB(34/255, 54/255, 111/255)
+        c.drawCentredString(w / 2, h - 330, "This certificate is presented to:")
+
+        c.setLineWidth(3)
+        c.setStrokeColorRGB(72/255, 171/255, 182/255)
+        c.line((w / 2 - (c.stringWidth(user_name, "GreatVibes", 104) / 2)), h - 515, (w / 2 + (c.stringWidth(user_name, "GreatVibes", 104) / 2)), h - 515)
+
+        c.setFont("GreatVibes", 104)
+        c.setFillColorRGB(34/255, 54/255, 111/255)
+        c.drawCentredString(w / 2, h - 500, user_name)
+
+        c.setFont("Nunito", 37)
+        c.setFillColorRGB(34/255, 54/255, 111/255)
+        c.drawCentredString(w / 2, h - 640, "For completing the course")
+
+        c.setFont("Nunito-Italic", 47)
+        c.setFillColorRGB(34/255, 54/255, 111/255)
+        c.drawCentredString(w / 2, h - 710, course_title)
+
+        logo = ImageReader(os.path.join(images_path, "certificate_coursify_logo.png"))
+        spacing = 20
+        logo_x = w / 2 - (100 / 2) - spacing - (c.stringWidth("COURSIFY", "Nunito", 37) / 2)
+        c.drawImage(logo, logo_x, h - 893, width=100, height=100, mask='auto')
+
+        c.setFont("MomoTrustDisplay", 37)
+        c.setFillColorRGB(72/255, 171/255, 182/255)
+        c.drawCentredString((w / 2) + 60, h - 860, "COURSIFY")
+
+        c.setFont("Nunito", 15)
+        c.setFillColorRGB(1, 1, 1)
+        text = f"This certificate can be validated using the following code: {code}"
+        c.drawString(10, 10, text)
 
         c.showPage()
         c.save()
@@ -323,7 +382,8 @@ async def download_certificate(course_id: int, user_id: int, db: Session, reques
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Requires 100% completion.")
 
     # 2) derive deterministic certificate code
-    certificate_code = hash_certificate(user_id, course_id)
+    certificate_hash = hash_certificate(user_id, course_id)
+    certificate_code = certificate_hash + "-" + user_id.__str__() + "-" + course_id.__str__()
     issued_at = datetime.datetime.utcnow()
 
     # 3) render PDF bytes
@@ -334,6 +394,7 @@ async def download_certificate(course_id: int, user_id: int, db: Session, reques
         course_id=course_id,
         code=certificate_code,
         issued_at=issued_at,
+        db=db,
     )
 
     # 4) upload to Buckjet (via app.state uploader)
@@ -360,6 +421,9 @@ async def download_certificate(course_id: int, user_id: int, db: Session, reques
     )
 
 
-async def validate_certificate(course_id: int, user_id: int, certificate_code: str):
-    valid = verify_certificate(user_id, course_id, certificate_code)
+async def validate_certificate(certificate_code: str):
+    user_id = int(certificate_code.split("-")[-2])
+    course_id = int(certificate_code.split("-")[-1])
+    certificate_hash = "-".join(certificate_code.split("-")[:-2])
+    valid = verify_certificate(user_id, course_id, certificate_hash)
     return valid
